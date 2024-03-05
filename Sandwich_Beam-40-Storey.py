@@ -2,42 +2,43 @@ import numpy as np
 import pandas as pd
 from scipy import interpolate
 
-num_f = 40             # Kat sayısı
-num_h = 3.29           # (m) Kat yüksekliği
-H = num_f * num_h      # (m) Bina yüksekliği
-bay1 = 7               # (m) 2. açıklık
-bay2 = 7               # (m) 3. açıklık
-E = 200 * 10 ** 6      # (kN/m2) Elastisite modülü
-G = 77 * 10 ** 6       # (kN/m2) Kayma modülü
-mass = 250             # (t/kat)
-Mt = 2 * mass * num_f  # (t) Toplam kütle (2 adet perde)
-m = mass / num_h       # (t/m) Kat yüksekliğine yayılan kütle
+"""### Building Features ###"""
+num_f = 40             # Number of floors
+num_h = 3.29           # (m) Floor height
+H = num_f * num_h      # (m) Building height
+bay1 = 7               # (m) Second gap
+bay2 = 7               # (m) Third gap
+E = 200 * 10 ** 6      # (kN/m2) Elasticity modulus
+G = 77 * 10 ** 6       # (kN/m2) Shear modulus
+mass = 250             # (t/floor)
+Mt = 2 * mass * num_f  # (t) Total Mass (2 shear wall)
+m = mass / num_h       # (t/m) Mass spread over floor height
 
-"""### Kolon Özellikleri ###"""
+"""### Column Properties ###"""
 # HD400x347
-Ic = 0.1249 * 10**(-2)   # (m4) Atalet momenti
-Ac = 442 * 10**(-4)      # (m2) Alan
-d = 0.407                # (m)  Profil yüksekliği
-Afl = 17655 * 10**(-6)   # (m2) Flanş alanı
-Aweb = 11150 * 10**(-6)  # (m2) Gövde alanı
-tweb = 27.2 * 10**(-3)   # (m)  Gövde kalınlığı
+Ic = 0.1249 * 10**(-2)   # (m4) Moment of inertia
+Ac = 442 * 10**(-4)      # (m2) Area
+d = 0.407                # (m)  Profile height
+Afl = 17655 * 10**(-6)   # (m2) Flange area
+Aweb = 11150 * 10**(-6)  # (m2) Web area
+tweb = 27.2 * 10**(-3)   # (m)  Web thickness
 
-"""### Kiriş Özellikleri ###"""
+"""### Beam Properties ###"""
 # HEA400
-Ib = 0.4507 * 10**(-3)  # (m4) Atalet momenti
-Lb = 7                  # (m)  Kiriş uzunluğu
+Ib = 0.4507 * 10**(-3)  # (m4) Moment of inertia
+Lb = 7                  # (m)  Beam length
 
-"""### Duvar Özellikleri ###"""
-plw = 6      # (m) Levha genişliği
-ptk = 0.006  # (m) Levha kalınlığı
+"""### Wall Properties ###"""
+plw = 6      # (m) Plate width
+ptk = 0.006  # (m) Plate thickness
 
-"""### Deprem Parametreleri ###"""
-Sa1 = 0.123654  # m/s2 (Spektral ivme)
-Sa2 = 0.558422  # m/s2 (Spektral ivme)
-Sa3 = 1.225113  # m/s2 (Spektral ivme)
-Sd1 = 0.174414  # m (Spektral yer değiştirme)
-Sd2 = 0.059739  # m (Spektral yer değiştirme)
-Sd3 = 0.027230  # m (Spektral yer değiştirme)
+"""### Earthquake Parameters ###"""
+Sa1 = 0.123654  # (m/s2) Spectral Acceleration
+Sa2 = 0.558422  # (m/s2) Spectral Acceleration
+Sa3 = 1.225113  # (m/s2) Spectral Acceleration
+Sd1 = 0.174414  # (m) Spectral Displacement
+Sd2 = 0.059739  # (m) Spectral Displacement
+Sd3 = 0.027230  # (m) Spectral Displacement
 
 correction = [[0.493], [0.653], [0.770], [0.812], [0.842], [0.863], [0.879],
               [0.892], [0.902], [0.911], [0.918], [0.924], [0.929], [0.934],
@@ -55,12 +56,12 @@ for i in index_rf:
         x = True
 
 if x != True:
-    df_rf.loc[num_f] = np.nan  # Kat sayısına göre bilinmeyen satırı eklenmesi
-    df_rf = df_rf.reindex(sorted(df_rf.index), axis=0)  # Listenin tekrar sıralanması
-    df_rf = df_rf.interpolate(method="polynomial", order=1).round(4)  # 1. derece polinom interpolasyonu
+    df_rf.loc[num_f] = np.nan  # Adding unknown row according to the number of floors
+    df_rf = df_rf.reindex(sorted(df_rf.index), axis=0)  # Reordering the list
+    df_rf = df_rf.interpolate(method="polynomial", order=1).round(4)  # 1st degree polynomial interpolation
     df_rf = df_rf.loc[num_f]
 
-rf = df_rf.loc["rf"]  # Kat seviyelerinde yığılmış kütlelerin katkısını dikkate alan bir faktör
+rf = df_rf.loc["rf"]  # A factor that takes into account the contribution of stacked masses at floor levels
 
 Q1 = Afl * (plw * 0.5 + d)
 Q2 = Q1 + Aweb * 0.5 * (plw + d)
@@ -72,7 +73,7 @@ beta2 = (Q3**2 + Q4**2) * plw / (2 * ptk)
 beta = beta1 + beta2
 
 Iw = (ptk * plw**3 / 12) + 2 * Ac * ((d + plw) / 2)**2 + 2 * Ic
-# Iw: Yanal yüke dayanıklı sistemin bir parçası olan her duvar için, değiştirilmiş ikinci alan momenti
+# Iw: Modified second moment of area for each wall that is part of the lateral load resisting system.
 KGAw = (Iw**2 / beta) * G
 
 fb = (rf * 0.5595 / H**2) * (E * Iw / m)**0.5
@@ -81,7 +82,7 @@ Tw = ((1 / fb**2) + (1 / fs**2))**0.5
 
 Imw = (m * H**4) / (0.313 * rf**2 * Tw**2 * E)
 
-I = Imw + 4 * Ic  # 4 kolon adedi
+I = Imw + 4 * Ic  # 4: Number of columns
 
 Ks1 = (12 * E) / (num_h * (1 / (4 * Ic / num_h) + 1 / (2 * Ib / Lb)))
 
@@ -101,7 +102,7 @@ alpha = round(((Ks / (E * I))**0.5), 9)
 
 k = round((alpha * H), 3)
 
-cc = round(((num_f / (num_f + 2.06))**0.5), 7)  # Düzeltme katsayısı
+cc = round(((num_f / (num_f + 2.06))**0.5), 7)  # Correction coefficient
 
 data = [[1.788, 0.285, 0.102, 1.57, -0.87, 0.51, 0.61, 0.19, 0.07],
         [1.529, 0.276, 0.101, 1.55, -0.85, 0.50, 0.62, 0.18, 0.06],
@@ -140,9 +141,9 @@ for i in index_k:
         y = True
 
 if y != True:
-    df.loc[k] = np.nan  # k değerine göre bilinmeyen satırı eklenmesi
-    df = df.reindex(sorted(df.index), axis=0)  # Listenin k değeri ile tekrar sıralanması
-    df = df.interpolate(method="polynomial", order=1).round(4)  # 1. derece polinom interpolasyonu
+    df.loc[k] = np.nan  # Adding unknown row based on k value
+    df = df.reindex(sorted(df.index), axis=0)  # Reordering the list with k value
+    df = df.interpolate(method="polynomial", order=1).round(4)  # 1st degree polynomial interpolation
     df = df.loc[k]
 
 Z1 = df.loc["Z1"]
