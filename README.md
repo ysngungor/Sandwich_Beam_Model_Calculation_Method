@@ -1,3 +1,5 @@
+![Sandwich](https://github.com/ysngungor/Sandwich_Beam_Model_Calculation_Method/assets/161377492/8fac83fa-5df3-465c-8e0e-6d8490c08ac5)
+
 # Code Scaffolding
 + In this study, I will focus on the code. You can find theoretical information on the subject in my master's thesis titled "An approach for the analysis of steel plate shear wall systems under earthquake loads", published in 2022.
 [Thesis Center](https://tez.yok.gov.tr/UlusalTezMerkezi/giris.jsp)
